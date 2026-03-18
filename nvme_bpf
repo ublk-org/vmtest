@@ -1,15 +1,18 @@
 #!/bin/bash
 # Test BPF arena SQ submission with NVMe VFIO device
 set -x
-export TMPDIR=/home/tom/git/linux/temp/vng/
-export LD_LIBRARY_PATH=/home/tom/git/ublksrv/lib/.libs:$LD_LIBRARY_PATH
+
+TOP=/home/ming/git/
+UBLKSRVD=${TOP}/ublksrv
+export TMPDIR=${TOP}/linux/temp/vng/
+export LD_LIBRARY_PATH=${UBLKSRVD}/lib/.libs:$LD_LIBRARY_PATH
 
 modprobe ublk_drv
 modprobe vfio_pci
 sleep 1
 
-UBLK_BPF=/home/tom/git/ublksrv/.libs/ublk.nvme_vfio
-UBLK_CTL=/home/tom/git/ublksrv/.libs/ublk
+UBLK_BPF=${UBLKSRVD}/.libs/ublk.nvme_vfio
+UBLK_CTL=${UBLKSRVD}/.libs/ublk
 
 # Find NVMe PCI device
 PCI=$(lspci | grep -i "Non-Volatile\|nvme" | head -1 | awk '{ print $1 }')
