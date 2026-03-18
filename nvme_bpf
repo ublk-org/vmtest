@@ -1,0 +1,65 @@
+#!/bin/bash
+# Test BPF arena SQ submission with NVMe VFIO device
+set -x
+export TMPDIR=/home/tom/git/linux/temp/vng/
+export LD_LIBRARY_PATH=/home/tom/git/ublksrv/lib/.libs:$LD_LIBRARY_PATH
+
+modprobe ublk_drv
+modprobe vfio_pci
+sleep 1
+
+UBLK_BPF=/home/tom/git/ublksrv/.libs/ublk.nvme_vfio
+UBLK_CTL=/home/tom/git/ublksrv/.libs/ublk
+
+# Find NVMe PCI device
+PCI=$(lspci | grep -i "Non-Volatile\|nvme" | head -1 | awk '{ print $1 }')
+if [ -z "$PCI" ]; then
+	echo "No NVMe PCI device found"
+	exit 4
+fi
+PCI_ADDR="0000:${PCI}"
+echo "=== Found NVMe at ${PCI_ADDR} ==="
+
+# Create ublk device with BPF SQ submission
+echo "=== Creating ublk BPF arena SQ device ==="
+${UBLK_BPF} add --pci ${PCI_ADDR} -q 2 -d 128 $@ &
+KPID=$!
+sleep 3
+
+if [ ! -b /dev/ublkb0 ]; then
+	echo "FAIL: /dev/ublkb0 not created"
+	dmesg | tail -50 | grep -i "ublk\|bpf\|vfio\|arena\|error\|fail" || true
+	kill $KPID 2>/dev/null
+	exit 1
+fi
+
+echo "=== Checking BPF trace for arena marker ==="
+cat /sys/kernel/debug/tracing/trace_pipe &
+TRACE_PID=$!
+sleep 1
+
+echo "=== Running dd test ==="
+dd of=/dev/ublkb0 if=/dev/zero bs=2M count=100 oflag=direct 2>&1 &
+DD_PID=$!
+sleep 5
+
+kill $TRACE_PID 2>/dev/null
+
+if kill -0 $DD_PID 2>/dev/null; then
+	echo "=== dd HUNG ==="
+	kill $DD_PID 2>/dev/null
+	RET=1
+else
+	wait $DD_PID
+	RET=$?
+	echo "=== dd completed, ret=$RET ==="
+fi
+
+# Clean shutdown
+echo "=== Deleting ublk device ==="
+${UBLK_CTL} del -n 0
+echo "=== del returned: $? ==="
+wait $KPID 2>/dev/null
+echo "=== daemon exited ==="
+
+exit $RET
