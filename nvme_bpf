@@ -25,7 +25,7 @@ echo "=== Found NVMe at ${PCI_ADDR} ==="
 
 # Create ublk device with BPF SQ submission
 echo "=== Creating ublk BPF arena SQ device ==="
-${UBLK_BPF} add --pci ${PCI_ADDR} -q 2 -d 128 $@ &
+${UBLK_BPF} add --pci ${PCI_ADDR} -q 8 -d 128 $@ &
 KPID=$!
 sleep 3
 
@@ -57,6 +57,8 @@ else
 	RET=$?
 	echo "=== dd completed, ret=$RET ==="
 fi
+
+${TOP}/fio/t/io_uring -p0 -r 10 /dev/ublkb0
 
 # Clean shutdown
 echo "=== Deleting ublk device ==="
