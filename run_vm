@@ -15,7 +15,7 @@ QEMU_EXTRA="-machine q35,kernel-irqchip=split \
   -drive file=${NDISK},format=raw,if=none,id=nvme_drv \
   -device nvme,drive=nvme_drv,serial=12345"
 
-vng --run . --force-9p \
+vng --run ${TOP} --force-9p \
   --cpus 32 --memory 4G \
   --verbose \
   --rwdir ${DATA} \
