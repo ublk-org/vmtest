@@ -9,6 +9,12 @@ It's designed to be cloned next to any kernel checkout — point it at
 your built kernel and it will boot it, mount the host filesystem into
 the guest over 9p, and run the requested test as root inside.
 
+> **Note:** unrelated to [`danobi/vmtest`](https://github.com/danobi/vmtest),
+> a separate (Rust) BPF-focused VM test runner. This project is a small
+> bash harness around `virtme-ng`, oriented toward block / ublk / io_uring
+> work — if you're looking for a general BPF kernel test runner, you
+> probably want that one instead.
+
 ## Layout
 
 ```
