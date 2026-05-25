@@ -73,8 +73,15 @@ cmd_list() {
 cmd_run() {
 	[ $# -ge 1 ] || { usage; exit 2; }
 	local name="$1"; shift
-	local f; f=$(test_file "$name")
-	[ -f "$f" ] || vt_die "no such test: $name (try './vmtest list')"
+	local f
+	# Accept either a registered test name (resolves to tests/NAME.sh)
+	# or a direct path to any executable script.
+	if [ -f "$name" ]; then
+		f="$name"
+	else
+		f=$(test_file "$name")
+		[ -f "$f" ] || vt_die "no such test: $name (try './vmtest list')"
+	fi
 	exec "$SELF_DIR/run_vm" "$f" "$@"
 }
 
