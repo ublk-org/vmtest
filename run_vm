@@ -75,6 +75,16 @@ if [ -n "${VMTEST_SSH:-}" ]; then
 	vt_log "  (run from another terminal; --ssh-tcp must match on both sides)"
 fi
 
+# Build a guest PATH that includes any cargo-installed bin dirs present
+# on the host. /home is exposed read-write into the guest via overlay,
+# so paths like /home/<user>/.cargo/bin resolve at the same absolute
+# location inside the VM. The glob expands here (on the host) before
+# vng is invoked; missing directories are filtered out.
+GUEST_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+for d in /home/*/.cargo/bin /root/.cargo/bin; do
+	[ -d "$d" ] && GUEST_PATH="$d:$GUEST_PATH"
+done
+
 # shellcheck disable=SC2086
 "$VNG_BIN" --run "$KERNEL_DIR" --force-9p \
 	--cpus "${VMTEST_CPUS:-16}" --memory "${VMTEST_MEM:-8G}" \
@@ -83,5 +93,5 @@ fi
 	--user root \
 	"${NET_ARGS[@]}" \
 	--append "$KCMDLINE" \
-	--exec "env $GUEST_ENV $TEST_CMD $*" \
+	--exec "env PATH=$GUEST_PATH $GUEST_ENV $TEST_CMD $*" \
 	"--qemu-opts=$QEMU_EXTRA"
