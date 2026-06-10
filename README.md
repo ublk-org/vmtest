@@ -95,7 +95,8 @@ deps cause tests to **skip** (exit 4), not fail.
 | `VMTEST_VNG` | `vng` | Path to the `vng` binary. |
 | `VMTEST_QEMU_EXTRA` | — | Extra QEMU args appended to the defaults. |
 | `VMTEST_SDISK_SIZE` / `VMTEST_NDISK_SIZE` | `2G` | Size of the auto-created scratch disks. |
-| `VMTEST_SSH` | — | If `1`, boot with user-mode networking + an in-VM sshd. Attach with `vng --ssh-client --ssh-tcp` from another terminal. |
+| `VMTEST_NET` | `1` | User-mode networking, **on by default**: the guest gets a DHCP address and can reach host services at the gateway `10.0.2.2` (a host server on `127.0.0.1:PORT` is `10.0.2.2:PORT` from the guest). No host setup or root needed. Set `0` to disable for a hermetic boot. |
+| `VMTEST_SSH` | — | If `1`, boot with an in-VM sshd (forces networking on even if `VMTEST_NET=0`). Attach with `vng --ssh-client --ssh-tcp` from another terminal. |
 | `VMTEST_HOLD` | — | If `1`, tests that call `vt_hold` will `sleep infinity` after the test body completes, keeping the VM up for post-mortem inspection. Pair with `VMTEST_SSH=1`. |
 
 Anything in the environment beats `vmtest.conf`, so per-invocation

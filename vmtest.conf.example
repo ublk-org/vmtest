@@ -55,8 +55,13 @@
 # These are typically set per-invocation on the command line rather than
 # in the config file, but they're documented here for discoverability.
 #
-# VMTEST_SSH=1   Enable user-mode networking + in-VM sshd. Connect from
-#                another terminal with:  vng --ssh-client --ssh-tcp
+# VMTEST_NET     User-mode networking, ON BY DEFAULT. The guest gets a DHCP
+#                address and reaches host services at the gateway 10.0.2.2 (a
+#                server bound on the host's 127.0.0.1:PORT is 10.0.2.2:PORT in
+#                the guest). Useful as: host runs the server, guest is client.
+#                Set VMTEST_NET=0 to disable for a hermetic boot.
+# VMTEST_SSH=1   Enable an in-VM sshd (forces networking on even if NET=0).
+#                Connect from another terminal with:  vng --ssh-client --ssh-tcp
 # VMTEST_HOLD=1  Have the test script call `vt_hold` (sleep infinity)
 #                after its body completes -- the VM stays up instead of
 #                powering off, so you can ssh in and inspect kernel state.

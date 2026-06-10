@@ -117,8 +117,15 @@ worth knowing (`run_vm` `--shell`):
   host. It refuses unless the test declares `# vmtest-host: yes` (only
   `rublk.sh` does today). This gate exists because most tests `modprobe`
   modules and touch real devices — running those on the host is dangerous.
-- To inspect a running VM, set `VMTEST_SSH=1` (adds user-mode net + in-VM
-  sshd; attach from another terminal with `vng --ssh-client --ssh-tcp`).
+- User-mode (SLIRP) networking is **on by default** (`VMTEST_NET=1`, set in
+  `run_vm`): the guest gets a DHCP address on `eth0` (`10.0.2.15`) and reaches
+  host services at the gateway `10.0.2.2` (a host server on `127.0.0.1:PORT`
+  is `10.0.2.2:PORT` in the guest) — the "host runs the server, guest is the
+  client" path. Set `VMTEST_NET=0` for a hermetic boot. `run_vm` adds
+  `--network user` at most once even when combined with `VMTEST_SSH`.
+- To inspect a running VM, set `VMTEST_SSH=1` (adds an in-VM sshd; forces
+  networking on even if `VMTEST_NET=0`; attach with `vng --ssh-client
+  --ssh-tcp`).
   Pair with `VMTEST_HOLD=1`, which makes tests that call `vt_hold` block on
   `sleep infinity` after the body finishes instead of powering off. atexit
   cleanups still run on Ctrl-C / `kill -TERM $$`.

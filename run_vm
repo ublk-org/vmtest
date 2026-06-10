@@ -84,13 +84,27 @@ if [ -n "$SHELL_MODE" ]; then
 	vt_log "  exit the shell (or Ctrl-D) to power off the VM"
 fi
 
-# Optional: enable networking + in-VM sshd so a user can `vng --ssh-client`
-# (or plain `ssh root@localhost -p <port>`) into the running VM. Off by
-# default to keep test boots fast and hermetic. Set VMTEST_SSH=1 to opt in.
+# Networking.
+#   VMTEST_NET    user-mode (SLIRP) networking, ON BY DEFAULT: the guest gets
+#                 a DHCP address and can reach host services at the gateway
+#                 10.0.2.2 (a server bound on the host's 127.0.0.1:PORT is
+#                 10.0.2.2:PORT from inside the guest). No host setup or root
+#                 required. Set VMTEST_NET=0 to disable for a hermetic boot.
+#   VMTEST_SSH=1  in-VM sshd so `vng --ssh-client` can attach; this needs
+#                 networking, so it forces user-mode on even if VMTEST_NET=0.
+# Add `--network user` at most once even when both are set.
+: "${VMTEST_NET:=1}"
 NET_ARGS=()
+# VMTEST_NET is default-on, so unlike the opt-in VMTEST_SSH/VMTEST_HOLD knobs
+# (plain non-empty test) it treats `0` and empty as off and any other value
+# as on. VMTEST_SSH forces networking on regardless.
+if { [ -n "$VMTEST_NET" ] && [ "$VMTEST_NET" != 0 ]; } || [ -n "${VMTEST_SSH:-}" ]; then
+	NET_ARGS+=(--network user)
+	vt_log "user-mode networking on: reach host services at 10.0.2.2 (VMTEST_NET=0 to disable)"
+fi
 if [ -n "${VMTEST_SSH:-}" ]; then
-	NET_ARGS+=(--network user --ssh --ssh-tcp)
-	vt_log "VMTEST_SSH=1: enabling user-mode networking + in-VM sshd"
+	NET_ARGS+=(--ssh --ssh-tcp)
+	vt_log "VMTEST_SSH=1: enabling in-VM sshd"
 	vt_log "  attach with: $VNG_BIN --ssh-client --ssh-tcp"
 	vt_log "  (run from another terminal; --ssh-tcp must match on both sides)"
 fi
