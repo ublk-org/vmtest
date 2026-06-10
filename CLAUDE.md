@@ -9,6 +9,23 @@ tests under [virtme-ng](https://github.com/arighi/virtme-ng). It is *not* a
 kernel source tree; it sits next to one and boots it. See `README.md` for
 user-facing docs.
 
+## Common commands
+
+There is **no build step** — everything is bash, run in place.
+
+```sh
+./vmtest config                 # verify config resolves (vng, vmlinux, dirs)
+./vmtest list                   # list tests + their requirements
+./vmtest run NAME [args]        # boot the kernel under vng, run a test inside
+./vmtest run ./path/to.sh       # run an ad-hoc script (not a registered test)
+./vmtest run-host NAME [args]   # run on the host (only if marked host-safe)
+KERNEL_DIR=~/git/linux-next ./vmtest run NAME   # per-invocation override
+shellcheck vmtest run_vm lib/common.sh tests/*.sh   # lint (no CI; run manually)
+```
+
+`shellcheck` is the only linter; the three top-level scripts carry inline
+`# shellcheck disable=` directives, so keep new code clean under it.
+
 ## Layout (load-bearing)
 
 ```
@@ -30,7 +47,10 @@ of each `tests/*.sh` — preserve the exact prefix (`# vmtest-desc:` /
 
 1. The user runs `./vmtest run NAME [args]` on the host.
 2. `vmtest` resolves config (`vmtest.conf` + env), then execs `run_vm` with
-   the absolute path to `tests/NAME.sh` plus any extra args.
+   the resolved script path plus any extra args. `NAME` is either a
+   registered test (resolves to `tests/NAME.sh`) or a literal path to any
+   script — `cmd_run` prefers an existing file at the given path before
+   falling back to `tests/NAME.sh` (see `vmtest:108`).
 3. `run_vm` checks `$KERNEL_DIR/vmlinux`, ensures `data/d1.img` and
    `data/d2.img` exist (creating them with `truncate` if not), then boots
    `vng` with:
@@ -66,6 +86,25 @@ should be treated as a supported public interface — don't break it.
   `vt_require_ublksrv` / `vt_require_fio`. Don't hard-code paths under
   `/home/ming/...` — those are gone for a reason.
 - `set -eu` at the top; `set -x` only when actively debugging.
+
+## run-host and post-mortem debugging
+
+- `run-host` bypasses the VM entirely and runs `tests/NAME.sh` on the real
+  host. It refuses unless the test declares `# vmtest-host: yes` (only
+  `rublk.sh` does today). This gate exists because most tests `modprobe`
+  modules and touch real devices — running those on the host is dangerous.
+- To inspect a running VM, set `VMTEST_SSH=1` (adds user-mode net + in-VM
+  sshd; attach from another terminal with `vng --ssh-client --ssh-tcp`).
+  Pair with `VMTEST_HOLD=1`, which makes tests that call `vt_hold` block on
+  `sleep infinity` after the body finishes instead of powering off. atexit
+  cleanups still run on Ctrl-C / `kill -TERM $$`.
+
+## Exit-code convention (kselftest)
+
+Tests follow kselftest semantics, enforced by the `lib/common.sh` helpers:
+`0` pass (`vt_pass`), `1` fail (`vt_die`), `4` skip (`vt_skip`, for missing
+optional deps / hardware). Keep skip and fail distinct — `vmtest list`
+advertises requirements so testers can tell which is which.
 
 ## Things that look like bugs but aren't
 
