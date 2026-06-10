@@ -38,11 +38,29 @@ $EDITOR vmtest.conf                   # set KERNEL_DIR at minimum
 ./vmtest list                         # see available tests
 ./vmtest run loop_autoclear           # run one inside the VM
 ./vmtest run ublk_test_grp generic    # pass args to the test
+./vmtest run shell                    # interactive root shell in the VM
 ```
 
 `./vmtest run NAME` boots the kernel at `$KERNEL_DIR` under `vng`, mounts
 the repo's `data/` directory read-write into the guest, and execs
 `tests/NAME.sh` as root inside.
+
+## Interactive shell
+
+`./vmtest run shell` (aliases: `run bash`, or a bare `./vmtest run`) boots
+the same VM but drops you at an interactive root shell instead of running a
+test — handy for poking at the kernel by hand or reproducing a test
+step-by-step.
+
+It's a real terminal: keyboard input, job control (`Ctrl-Z`, `fg`, `bg`),
+and line editing all work. The shell inherits the same environment the tests
+get — `PATH` (including any host `~/.cargo/bin`), `UBLKSRV_DIR`,
+`VMTEST_DATA_DIR`, `TERM`, etc. — and starts in the repo directory, so you
+can `source lib/common.sh` and call the `vt_*` helpers directly. Exit the
+shell (or press `Ctrl-D`) to power the VM off.
+
+A registered test or file literally named `shell`/`bash` still takes
+precedence over the keyword, so it can never shadow a real test.
 
 ## Prerequisites
 
