@@ -59,6 +59,7 @@ GUEST_ENV="VMTEST_DATA_DIR=$VMTEST_DATA_DIR"
 [ -n "${UBLKSRV_DIR:-}" ] && GUEST_ENV="$GUEST_ENV UBLKSRV_DIR=$UBLKSRV_DIR"
 [ -n "${FIO_DIR:-}"     ] && GUEST_ENV="$GUEST_ENV FIO_DIR=$FIO_DIR"
 [ -n "${RUBLK_DIR:-}"   ] && GUEST_ENV="$GUEST_ENV RUBLK_DIR=$RUBLK_DIR"
+[ -n "${LIBURING_DIR:-}" ] && GUEST_ENV="$GUEST_ENV LIBURING_DIR=$LIBURING_DIR"
 # Honoured by tests that want to hold the VM open after the test body
 # completes (e.g., for post-mortem inspection via ssh). Tests should
 # `sleep infinity` (or similar) when this is set.
