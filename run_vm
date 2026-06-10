@@ -116,9 +116,13 @@ if [ -n "$SHELL_MODE" ]; then
 	SHELL_WRAPPER="$VMTEST_TMPDIR/vmtest-shell.sh"
 	{
 		echo '#!/bin/bash'
-		echo "export PATH='$GUEST_PATH'"
-		for kv in $GUEST_ENV; do echo "export ${kv%%=*}='${kv#*=}'"; done
-		echo "cd '$SELF_DIR' 2>/dev/null || true"
+		# printf %q shell-quotes each value so quotes/spaces/metacharacters
+		# in a forwarded path can't break or inject into the wrapper.
+		printf 'export PATH=%q\n' "$GUEST_PATH"
+		for kv in $GUEST_ENV; do
+			printf 'export %s=%q\n' "${kv%%=*}" "${kv#*=}"
+		done
+		printf 'cd %q 2>/dev/null || true\n' "$SELF_DIR"
 		echo 'exec bash -i'
 	} > "$SHELL_WRAPPER"
 	chmod +x "$SHELL_WRAPPER"
