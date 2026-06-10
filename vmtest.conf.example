@@ -24,6 +24,10 @@
 # Plain `fio` from $PATH is enough for the other fio-based tests.
 #FIO_DIR="$HOME/git/fio"
 
+# liburing source tree (needed by the liburing_* tests, which run the
+# prebuilt test binaries under $LIBURING_DIR/test).
+#LIBURING_DIR="$HOME/git/others/liburing"
+
 # Rust ublk crate to run `cargo test` against.
 #RUBLK_DIR="$VMTEST_DATA_DIR/rublk"
 

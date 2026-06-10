@@ -82,11 +82,12 @@ vt_load_config() {
 	# Optional — only checked by tests that explicitly require them.
 	: "${UBLKSRV_DIR:=}"
 	: "${FIO_DIR:=}"
+	: "${LIBURING_DIR:=}"
 	: "${RUBLK_DIR:=${VMTEST_DATA_DIR}/rublk}"
 
 	mkdir -p "$VMTEST_DATA_DIR" "$VMTEST_TMPDIR"
 	export KERNEL_DIR VMTEST_DATA_DIR VMTEST_TMPDIR
-	export UBLKSRV_DIR FIO_DIR RUBLK_DIR
+	export UBLKSRV_DIR FIO_DIR RUBLK_DIR LIBURING_DIR
 }
 
 # ----------------------------------------------------------------------

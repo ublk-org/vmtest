@@ -14,11 +14,40 @@ set -eu
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck disable=SC1091
 . "$SELF_DIR/lib/common.sh"
+
+# Global option (must precede the subcommand): -c/--config FILE selects the
+# config file and exports it so run_vm inherits the same choice. Everything
+# the harness needs (KERNEL_DIR, UBLKSRV_DIR, LIBURING_DIR, ...) can then live
+# in that one file instead of being passed as command-line variables.
+while [ $# -gt 0 ]; do
+	case "$1" in
+	-c|--config)
+		[ $# -ge 2 ] || vt_die "$1 requires a FILE argument"
+		export VMTEST_CONF="$2"; shift 2 ;;
+	-c=*|--config=*)
+		export VMTEST_CONF="${1#*=}"; shift ;;
+	*) break ;;
+	esac
+done
+
+# An explicitly selected config file must exist; canonicalize to an absolute
+# path so it resolves identically after run_vm is exec'd (cwd is preserved,
+# but an absolute path is robust regardless).
+if [ -n "${VMTEST_CONF:-}" ]; then
+	[ -r "$VMTEST_CONF" ] || vt_die "config file not readable: $VMTEST_CONF"
+	VMTEST_CONF="$(cd "$(dirname "$VMTEST_CONF")" && pwd)/$(basename "$VMTEST_CONF")"
+	export VMTEST_CONF
+fi
+
 vt_load_config
 
 usage() {
 	cat <<EOF
-usage: vmtest <command> [args]
+usage: vmtest [-c FILE] <command> [args]
+
+Global options:
+  -c, --config FILE          Use FILE as the config (default: vmtest.conf).
+                             May set KERNEL_DIR, UBLKSRV_DIR, LIBURING_DIR, etc.
 
 Commands:
   list                       List available tests.
@@ -106,6 +135,7 @@ VMTEST_DATA_DIR = $VMTEST_DATA_DIR
 VMTEST_TMPDIR   = $VMTEST_TMPDIR
 UBLKSRV_DIR     = ${UBLKSRV_DIR:-(unset)}
 FIO_DIR         = ${FIO_DIR:-(unset)}
+LIBURING_DIR    = ${LIBURING_DIR:-(unset)}
 RUBLK_DIR       = ${RUBLK_DIR:-(unset)}
 VMTEST_CPUS     = ${VMTEST_CPUS:-16}
 VMTEST_MEM      = ${VMTEST_MEM:-8G}
