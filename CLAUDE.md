@@ -18,6 +18,7 @@ There is **no build step** — everything is bash, run in place.
 ./vmtest list                   # list tests + their requirements
 ./vmtest run NAME [args]        # boot the kernel under vng, run a test inside
 ./vmtest run ./path/to.sh       # run an ad-hoc script (not a registered test)
+./vmtest run shell              # interactive root shell in the VM (also bare `run`)
 ./vmtest run-host NAME [args]   # run on the host (only if marked host-safe)
 KERNEL_DIR=~/git/linux-next ./vmtest run NAME   # per-invocation override
 shellcheck vmtest run_vm lib/common.sh tests/*.sh   # lint (no CI; run manually)
@@ -86,6 +87,29 @@ should be treated as a supported public interface — don't break it.
   `vt_require_ublksrv` / `vt_require_fio`. Don't hard-code paths under
   `/home/ming/...` — those are gone for a reason.
 - `set -eu` at the top; `set -x` only when actively debugging.
+
+## Interactive shell
+
+`./vmtest run shell` (aliases: `run bash`, or bare `./vmtest run`) boots the
+same VM but drops into an interactive root shell instead of a test. Mechanics
+worth knowing (`run_vm` `--shell`):
+
+- Shell mode must **not** use virtme-ng's `--exec`/`--script-sh` path: in
+  script mode the kernel console is a write-only chardev and the script's
+  stdin is a non-tty virtio-serial port, so an interactive shell there gets
+  no input and no job control. Instead shell mode boots vng *without*
+  `--exec`, so virtme-ng wires a bidirectional getty on the serial console
+  (`/dev/ttyS0`) — a real tty with input and job control (`$-` has `i`+`m`).
+- Env forwarding (which `--exec` normally carries) is reintroduced via a
+  generated wrapper passed to vng's `--shell`. `run_vm` writes
+  `$VMTEST_TMPDIR/vmtest-shell.sh` — it `export`s the same `PATH` (incl.
+  cargo bins), `UBLKSRV_DIR`, `VMTEST_DATA_DIR`, `TERM`, etc. that tests
+  get, `cd`s into the repo, then `exec bash -i`. The tmpdir is mounted into
+  the guest at the same absolute path, so vng can exec it as the login
+  shell. You can `source lib/common.sh` and reproduce a test by hand.
+- Precedence: a real test or file named `shell`/`bash` wins over the keyword,
+  so the keyword can never shadow an actual test (`cmd_run` in `vmtest`).
+- Exit the shell (or Ctrl-D) to power the VM off.
 
 ## run-host and post-mortem debugging
 

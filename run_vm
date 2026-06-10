@@ -18,12 +18,24 @@ SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SELF_DIR/lib/common.sh"
 vt_load_config
 
-if [ $# -lt 1 ]; then
-	echo "usage: $0 <test-script> [args...]" >&2
-	exit 2
+# `--shell` drops into an interactive root shell inside the guest instead
+# of running a test. This must NOT go through virtme-ng's --exec/--script-sh
+# path: in script mode the kernel console is a write-only chardev and the
+# script's stdin is a non-tty virtio-serial port, so an interactive shell
+# there gets no input and no job control. Interactive mode (no --exec) wires
+# a bidirectional getty on the serial console instead. We reintroduce the
+# env that --exec would have forwarded via a generated --shell wrapper below.
+SHELL_MODE=
+if [ "${1:-}" = "--shell" ]; then
+	SHELL_MODE=1; shift
+	TEST_CMD=
+else
+	if [ $# -lt 1 ]; then
+		echo "usage: $0 <test-script|--shell> [args...]" >&2
+		exit 2
+	fi
+	TEST_CMD="$1"; shift
 fi
-
-TEST_CMD="$1"; shift
 
 # Sanity checks before we shell out to vng.
 VNG_BIN="${VMTEST_VNG:-vng}"
@@ -64,6 +76,13 @@ GUEST_ENV="VMTEST_DATA_DIR=$VMTEST_DATA_DIR"
 # completes (e.g., for post-mortem inspection via ssh). Tests should
 # `sleep infinity` (or similar) when this is set.
 [ -n "${VMTEST_HOLD:-}" ] && GUEST_ENV="$GUEST_ENV VMTEST_HOLD=$VMTEST_HOLD"
+# In interactive shell mode, carry the host TERM through so readline,
+# clear, and full-screen tools (vim, less) behave inside the guest.
+if [ -n "$SHELL_MODE" ]; then
+	GUEST_ENV="$GUEST_ENV TERM=${TERM:-xterm}"
+	vt_log "shell mode: dropping into an interactive root shell in the guest"
+	vt_log "  exit the shell (or Ctrl-D) to power off the VM"
+fi
 
 # Optional: enable networking + in-VM sshd so a user can `vng --ssh-client`
 # (or plain `ssh root@localhost -p <port>`) into the running VM. Off by
@@ -86,6 +105,28 @@ for d in /home/*/.cargo/bin /root/.cargo/bin; do
 	[ -d "$d" ] && GUEST_PATH="$d:$GUEST_PATH"
 done
 
+# Mode-specific vng args. Test mode runs the script via --exec, prefixing
+# the env that vng does not otherwise forward. Shell mode instead boots
+# interactively (so the getty owns the console for bidirectional I/O) and
+# carries the same env through a generated wrapper passed to --shell. The
+# wrapper lives under VMTEST_TMPDIR, which is mounted into the guest at the
+# same absolute path, so vng can exec it as the login shell.
+MODE_ARGS=()
+if [ -n "$SHELL_MODE" ]; then
+	SHELL_WRAPPER="$VMTEST_TMPDIR/vmtest-shell.sh"
+	{
+		echo '#!/bin/bash'
+		echo "export PATH='$GUEST_PATH'"
+		for kv in $GUEST_ENV; do echo "export ${kv%%=*}='${kv#*=}'"; done
+		echo "cd '$SELF_DIR' 2>/dev/null || true"
+		echo 'exec bash -i'
+	} > "$SHELL_WRAPPER"
+	chmod +x "$SHELL_WRAPPER"
+	MODE_ARGS=(--shell "$SHELL_WRAPPER")
+else
+	MODE_ARGS=(--exec "env PATH=$GUEST_PATH $GUEST_ENV $TEST_CMD $*")
+fi
+
 # shellcheck disable=SC2086
 "$VNG_BIN" --run "$KERNEL_DIR" --force-9p \
 	--cpus "${VMTEST_CPUS:-16}" --memory "${VMTEST_MEM:-8G}" \
@@ -94,5 +135,5 @@ done
 	--user root \
 	"${NET_ARGS[@]}" \
 	--append "$KCMDLINE" \
-	--exec "env PATH=$GUEST_PATH $GUEST_ENV $TEST_CMD $*" \
+	"${MODE_ARGS[@]}" \
 	"--qemu-opts=$QEMU_EXTRA"

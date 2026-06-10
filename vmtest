@@ -6,6 +6,7 @@
 # Subcommands:
 #   list                       list available tests with one-line descriptions
 #   run NAME [args...]         run a test inside the VM (default)
+#   run [shell|bash]           interactive root shell in the VM (no-arg default)
 #   run-host NAME [args...]    run a test on the host (e.g. rublk cargo tests)
 #   config                     print effective configuration
 #   help                       show this message
@@ -52,6 +53,8 @@ Global options:
 Commands:
   list                       List available tests.
   run NAME [args...]         Boot KERNEL_DIR under vng and run tests/NAME.sh.
+  run [shell|bash]           Boot KERNEL_DIR under vng and drop into an
+                             interactive root shell (also the no-arg default).
   run-host NAME [args...]    Run tests/NAME.sh on the host (no VM).
   config                     Print effective config.
   help                       This message.
@@ -100,7 +103,18 @@ cmd_list() {
 }
 
 cmd_run() {
-	[ $# -ge 1 ] || { usage; exit 2; }
+	# Interactive shell mode: bare `run`, or `run shell` / `run bash`.
+	# Precedence: an actual file or registered test named "shell"/"bash"
+	# wins over the keyword, so the keyword can never shadow a real test.
+	if [ $# -eq 0 ]; then
+		exec "$SELF_DIR/run_vm" --shell
+	fi
+	if { [ "$1" = shell ] || [ "$1" = bash ]; } \
+		&& [ ! -f "$1" ] && [ ! -f "$(test_file "$1")" ]; then
+		shift
+		exec "$SELF_DIR/run_vm" --shell "$@"
+	fi
+
 	local name="$1"; shift
 	local f
 	# Accept either a registered test name (resolves to tests/NAME.sh)
