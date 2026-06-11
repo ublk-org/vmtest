@@ -54,13 +54,58 @@ NDISK_SIZE="${VMTEST_NDISK_SIZE:-2G}"
 [ -f "$SDISK" ] || { vt_log "creating $SDISK ($SDISK_SIZE)"; truncate -s "$SDISK_SIZE" "$SDISK"; }
 [ -f "$NDISK" ] || { vt_log "creating $NDISK ($NDISK_SIZE)"; truncate -s "$NDISK_SIZE" "$NDISK"; }
 
+# VM sizing — resolved once here so the NUMA split below always matches
+# what vng passes to QEMU's -m / -smp.
+VM_CPUS="${VMTEST_CPUS:-16}"
+VM_MEM="${VMTEST_MEM:-8G}"
+
+# NUMA topology. VMTEST_NUMA_NODES > 1 emulates that many NUMA nodes,
+# splitting memory and CPUs evenly across them (any remainder goes to the
+# last node). QEMU requires the memory backends to sum exactly to -m, so
+# everything is computed in MiB. Default (1) keeps today's flat topology.
+NUMA_QEMU=
+NUMA_NODES="${VMTEST_NUMA_NODES:-1}"
+case "$NUMA_NODES" in
+	''|*[!0-9]*|0) vt_die "VMTEST_NUMA_NODES must be a positive integer (got '$NUMA_NODES')" ;;
+esac
+if [ "$NUMA_NODES" -gt 1 ]; then
+	case "$VM_MEM" in
+		*[Gg]) MEM_NUM="${VM_MEM%[Gg]}"; MEM_SCALE=1024 ;;
+		*[Mm]) MEM_NUM="${VM_MEM%[Mm]}"; MEM_SCALE=1 ;;
+		*)     MEM_NUM="$VM_MEM";        MEM_SCALE=1 ;;  # bare = MiB (QEMU default)
+	esac
+	case "$MEM_NUM" in
+		''|*[!0-9]*) vt_die "cannot split VMTEST_MEM='$VM_MEM' across NUMA nodes (use a plain integer with optional M/G suffix)" ;;
+	esac
+	MEM_MB=$(( MEM_NUM * MEM_SCALE ))
+	[ "$VM_CPUS" -ge "$NUMA_NODES" ] \
+		|| vt_die "VMTEST_NUMA_NODES=$NUMA_NODES needs at least that many CPUs (VMTEST_CPUS=$VM_CPUS)"
+	MEM_PER=$(( MEM_MB / NUMA_NODES ))
+	[ "$MEM_PER" -ge 1 ] || vt_die "VMTEST_MEM=$VM_MEM too small for $NUMA_NODES NUMA nodes"
+	CPU_PER=$(( VM_CPUS / NUMA_NODES ))
+	cpu_lo=0
+	for (( node = 0; node < NUMA_NODES; node++ )); do
+		if (( node == NUMA_NODES - 1 )); then
+			node_mem=$(( MEM_MB - MEM_PER * node ))
+			cpu_hi=$(( VM_CPUS - 1 ))
+		else
+			node_mem=$MEM_PER
+			cpu_hi=$(( cpu_lo + CPU_PER - 1 ))
+		fi
+		NUMA_QEMU="$NUMA_QEMU -object memory-backend-ram,id=ram${node},size=${node_mem}M"
+		NUMA_QEMU="$NUMA_QEMU -numa node,nodeid=${node},memdev=ram${node},cpus=${cpu_lo}-${cpu_hi}"
+		cpu_lo=$(( cpu_hi + 1 ))
+	done
+	vt_log "NUMA: $NUMA_NODES nodes, ~${MEM_PER}M + ~${CPU_PER} cpus each (guest kernel needs CONFIG_NUMA=y)"
+fi
+
 QEMU_EXTRA="-machine q35,kernel-irqchip=split \
   -device intel-iommu,intremap=on,caching-mode=on,device-iotlb=on \
   -device virtio-scsi-pci,id=scsi_extra,num_queues=32 \
   -device scsi-hd,drive=extra_hd,bus=scsi_extra.0 \
   -drive if=none,id=extra_hd,file=${SDISK},format=raw \
   -drive file=${NDISK},format=raw,if=none,id=nvme_drv \
-  -device nvme,drive=nvme_drv,serial=12345${VMTEST_QEMU_EXTRA:+ $VMTEST_QEMU_EXTRA}"
+  -device nvme,drive=nvme_drv,serial=12345${NUMA_QEMU}${VMTEST_QEMU_EXTRA:+ $VMTEST_QEMU_EXTRA}"
 
 KCMDLINE="intel_iommu=on systemd.mask=dev-zram0.device systemd.mask=systemd-zram-setup@zram0.service${VMTEST_KCMDLINE_EXTRA:+ $VMTEST_KCMDLINE_EXTRA}"
 
@@ -147,7 +192,7 @@ fi
 
 # shellcheck disable=SC2086
 "$VNG_BIN" --run "$KERNEL_DIR" --force-9p \
-	--cpus "${VMTEST_CPUS:-16}" --memory "${VMTEST_MEM:-8G}" \
+	--cpus "$VM_CPUS" --memory "$VM_MEM" \
 	--verbose \
 	--rwdir "$VMTEST_DATA_DIR" \
 	--user root \

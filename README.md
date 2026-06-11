@@ -91,6 +91,7 @@ deps cause tests to **skip** (exit 4), not fail.
 | `RUBLK_DIR` | `$VMTEST_DATA_DIR/rublk` | Rust crate for `rublk` tests. |
 | `VMTEST_CPUS` | `16` | vCPUs passed to vng. |
 | `VMTEST_MEM` | `8G` | Memory passed to vng. |
+| `VMTEST_NUMA_NODES` | `1` | Number of emulated NUMA nodes. When `> 1`, memory and CPUs are split evenly across the nodes (remainder to the last node). Requires `VMTEST_CPUS >= nodes` and `CONFIG_NUMA=y` in the guest kernel. |
 | `VMTEST_KCMDLINE_EXTRA` | — | Extra kernel command line. |
 | `VMTEST_VNG` | `vng` | Path to the `vng` binary. |
 | `VMTEST_QEMU_EXTRA` | — | Extra QEMU args appended to the defaults. |

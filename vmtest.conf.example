@@ -37,6 +37,11 @@
 #VMTEST_CPUS=16
 #VMTEST_MEM=8G
 
+# Number of emulated NUMA nodes (default 1 = flat topology). Memory and
+# CPUs are split evenly across the nodes; any remainder goes to the last
+# node. Needs VMTEST_CPUS >= nodes and CONFIG_NUMA=y in the guest kernel.
+#VMTEST_NUMA_NODES=2
+
 # Extra kernel command-line args appended to the default.
 #VMTEST_KCMDLINE_EXTRA=""
 

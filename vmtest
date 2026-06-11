@@ -153,6 +153,7 @@ LIBURING_DIR    = ${LIBURING_DIR:-(unset)}
 RUBLK_DIR       = ${RUBLK_DIR:-(unset)}
 VMTEST_CPUS     = ${VMTEST_CPUS:-16}
 VMTEST_MEM      = ${VMTEST_MEM:-8G}
+VMTEST_NUMA_NODES = ${VMTEST_NUMA_NODES:-1}
 VMTEST_VNG      = ${VMTEST_VNG:-vng}
 EOF
 	local vng_bin="${VMTEST_VNG:-vng}"
