@@ -34,12 +34,18 @@ cd vmtest
 cp vmtest.conf.example vmtest.conf
 $EDITOR vmtest.conf                   # set KERNEL_DIR at minimum
 
-./vmtest config                       # check everything resolves
-./vmtest list                         # see available tests
-./vmtest run loop_autoclear           # run one inside the VM
-./vmtest run ublk_test_grp generic    # pass args to the test
-./vmtest run shell                    # interactive root shell in the VM
+./vmtest -c vmtest.conf config        # check everything resolves
+./vmtest -c vmtest.conf list          # see available tests
+./vmtest -c vmtest.conf run loop_autoclear  # run one inside the VM
+./vmtest -c vmtest.conf run ublk_test_grp generic  # pass args to the test
+./vmtest -c vmtest.conf run shell     # interactive root shell in the VM
 ```
+
+The `-c vmtest.conf` is **preferred** — it makes the config file explicit.
+(If omitted, `vmtest` silently defaults to `./vmtest.conf`, which can be
+surprising when you meant to use a different config.) Everything the harness
+needs — `KERNEL_DIR`, `UBLKSRV_DIR`, `LIBURING_DIR`, etc. — can live in that
+one file instead of being passed as command-line variables.
 
 `./vmtest run NAME` boots the kernel at `$KERNEL_DIR` under `vng`, mounts
 the repo's `data/` directory read-write into the guest, and execs
@@ -88,6 +94,7 @@ deps cause tests to **skip** (exit 4), not fail.
 | `VMTEST_DATA_DIR` | `<repo>/data` | Scratch dir exposed to the guest via 9p. |
 | `UBLKSRV_DIR` | unset | Path to a built ublksrv. |
 | `FIO_DIR` | unset | Path to an fio source tree (uses `fio/t/io_uring`). |
+| `LIBURING_DIR` | unset | Path to a liburing source tree (runs prebuilt test binaries under `test/`). |
 | `RUBLK_DIR` | `$VMTEST_DATA_DIR/rublk` | Rust crate for `rublk` tests. |
 | `VMTEST_CPUS` | `16` | vCPUs passed to vng. |
 | `VMTEST_MEM` | `8G` | Memory passed to vng. |
@@ -104,8 +111,12 @@ Anything in the environment beats `vmtest.conf`, so per-invocation
 overrides work:
 
 ```sh
-KERNEL_DIR=~/git/linux-next ./vmtest run ublk_selftest
+KERNEL_DIR=~/git/linux-next ./vmtest -c vmtest.conf run ublk_selftest
 ```
+
+The `-c` flag is a **global option** (must precede the subcommand) and
+accepts either `-c FILE` or `--config FILE`. It exports `VMTEST_CONF` so
+that `run_vm` inherits the same choice without re-specifying it.
 
 ## Writing a new test
 
