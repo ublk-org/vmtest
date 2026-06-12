@@ -64,12 +64,78 @@ vt_install_trap() {
 # ----------------------------------------------------------------------
 
 vt_load_config() {
+	# Snapshot environment overrides before the config file can clobber them.
+	# The design rule is: environment > vmtest.conf > defaults.
+	# We test ${VAR+set} on the ORIGINAL variable (before sourcing), which is
+	# true when it was set in the environment at all — including to an empty
+	# string (e.g. UBLKSRV_DIR="" to disable ublksrv is meaningful).
+	local _had_KERNEL_DIR=0 _val_KERNEL_DIR=
+	[ "${KERNEL_DIR+set}" = set ] && { _had_KERNEL_DIR=1; _val_KERNEL_DIR="$KERNEL_DIR"; }
+	local _had_VMTEST_DATA_DIR=0 _val_VMTEST_DATA_DIR=
+	[ "${VMTEST_DATA_DIR+set}" = set ] && { _had_VMTEST_DATA_DIR=1; _val_VMTEST_DATA_DIR="$VMTEST_DATA_DIR"; }
+	local _had_VMTEST_TMPDIR=0 _val_VMTEST_TMPDIR=
+	[ "${VMTEST_TMPDIR+set}" = set ] && { _had_VMTEST_TMPDIR=1; _val_VMTEST_TMPDIR="$VMTEST_TMPDIR"; }
+	local _had_UBLKSRV_DIR=0 _val_UBLKSRV_DIR=
+	[ "${UBLKSRV_DIR+set}" = set ] && { _had_UBLKSRV_DIR=1; _val_UBLKSRV_DIR="$UBLKSRV_DIR"; }
+	local _had_FIO_DIR=0 _val_FIO_DIR=
+	[ "${FIO_DIR+set}" = set ] && { _had_FIO_DIR=1; _val_FIO_DIR="$FIO_DIR"; }
+	local _had_LIBURING_DIR=0 _val_LIBURING_DIR=
+	[ "${LIBURING_DIR+set}" = set ] && { _had_LIBURING_DIR=1; _val_LIBURING_DIR="$LIBURING_DIR"; }
+	local _had_RUBLK_DIR=0 _val_RUBLK_DIR=
+	[ "${RUBLK_DIR+set}" = set ] && { _had_RUBLK_DIR=1; _val_RUBLK_DIR="$RUBLK_DIR"; }
+	# VM tuning knobs (consumed by run_vm, config file sourced here).
+	local _had_VMTEST_CPUS=0 _val_VMTEST_CPUS=
+	[ "${VMTEST_CPUS+set}" = set ] && { _had_VMTEST_CPUS=1; _val_VMTEST_CPUS="$VMTEST_CPUS"; }
+	local _had_VMTEST_MEM=0 _val_VMTEST_MEM=
+	[ "${VMTEST_MEM+set}" = set ] && { _had_VMTEST_MEM=1; _val_VMTEST_MEM="$VMTEST_MEM"; }
+	local _had_VMTEST_NUMA_NODES=0 _val_VMTEST_NUMA_NODES=
+	[ "${VMTEST_NUMA_NODES+set}" = set ] && { _had_VMTEST_NUMA_NODES=1; _val_VMTEST_NUMA_NODES="$VMTEST_NUMA_NODES"; }
+	local _had_VMTEST_NET=0 _val_VMTEST_NET=
+	[ "${VMTEST_NET+set}" = set ] && { _had_VMTEST_NET=1; _val_VMTEST_NET="$VMTEST_NET"; }
+	local _had_VMTEST_SSH=0 _val_VMTEST_SSH=
+	[ "${VMTEST_SSH+set}" = set ] && { _had_VMTEST_SSH=1; _val_VMTEST_SSH="$VMTEST_SSH"; }
+	local _had_VMTEST_HOLD=0 _val_VMTEST_HOLD=
+	[ "${VMTEST_HOLD+set}" = set ] && { _had_VMTEST_HOLD=1; _val_VMTEST_HOLD="$VMTEST_HOLD"; }
+	local _had_VMTEST_KCMDLINE_EXTRA=0 _val_VMTEST_KCMDLINE_EXTRA=
+	[ "${VMTEST_KCMDLINE_EXTRA+set}" = set ] && { _had_VMTEST_KCMDLINE_EXTRA=1; _val_VMTEST_KCMDLINE_EXTRA="$VMTEST_KCMDLINE_EXTRA"; }
+	local _had_VMTEST_QEMU_EXTRA=0 _val_VMTEST_QEMU_EXTRA=
+	[ "${VMTEST_QEMU_EXTRA+set}" = set ] && { _had_VMTEST_QEMU_EXTRA=1; _val_VMTEST_QEMU_EXTRA="$VMTEST_QEMU_EXTRA"; }
+	local _had_VMTEST_VNG=0 _val_VMTEST_VNG=
+	[ "${VMTEST_VNG+set}" = set ] && { _had_VMTEST_VNG=1; _val_VMTEST_VNG="$VMTEST_VNG"; }
+	local _had_VMTEST_SDISK_SIZE=0 _val_VMTEST_SDISK_SIZE=
+	[ "${VMTEST_SDISK_SIZE+set}" = set ] && { _had_VMTEST_SDISK_SIZE=1; _val_VMTEST_SDISK_SIZE="$VMTEST_SDISK_SIZE"; }
+	local _had_VMTEST_NDISK_SIZE=0 _val_VMTEST_NDISK_SIZE=
+	[ "${VMTEST_NDISK_SIZE+set}" = set ] && { _had_VMTEST_NDISK_SIZE=1; _val_VMTEST_NDISK_SIZE="$VMTEST_NDISK_SIZE"; }
+
 	local cfg="${VMTEST_CONF:-${VT_TOP}/vmtest.conf}"
 	if [ -r "$cfg" ]; then
 		# shellcheck disable=SC1090
 		. "$cfg"
 	fi
 
+	# Restore environment overrides — env beats config file.
+	[ "$_had_KERNEL_DIR" = 1 ] && KERNEL_DIR="$_val_KERNEL_DIR"
+	[ "$_had_VMTEST_DATA_DIR" = 1 ] && VMTEST_DATA_DIR="$_val_VMTEST_DATA_DIR"
+	[ "$_had_VMTEST_TMPDIR" = 1 ] && VMTEST_TMPDIR="$_val_VMTEST_TMPDIR"
+	[ "$_had_UBLKSRV_DIR" = 1 ] && UBLKSRV_DIR="$_val_UBLKSRV_DIR"
+	[ "$_had_FIO_DIR" = 1 ] && FIO_DIR="$_val_FIO_DIR"
+	[ "$_had_LIBURING_DIR" = 1 ] && LIBURING_DIR="$_val_LIBURING_DIR"
+	[ "$_had_RUBLK_DIR" = 1 ] && RUBLK_DIR="$_val_RUBLK_DIR"
+
+	# VM tuning knobs — same: env beats config file.
+	[ "$_had_VMTEST_CPUS" = 1 ] && VMTEST_CPUS="$_val_VMTEST_CPUS"
+	[ "$_had_VMTEST_MEM" = 1 ] && VMTEST_MEM="$_val_VMTEST_MEM"
+	[ "$_had_VMTEST_NUMA_NODES" = 1 ] && VMTEST_NUMA_NODES="$_val_VMTEST_NUMA_NODES"
+	[ "$_had_VMTEST_NET" = 1 ] && VMTEST_NET="$_val_VMTEST_NET"
+	[ "$_had_VMTEST_SSH" = 1 ] && VMTEST_SSH="$_val_VMTEST_SSH"
+	[ "$_had_VMTEST_HOLD" = 1 ] && VMTEST_HOLD="$_val_VMTEST_HOLD"
+	[ "$_had_VMTEST_KCMDLINE_EXTRA" = 1 ] && VMTEST_KCMDLINE_EXTRA="$_val_VMTEST_KCMDLINE_EXTRA"
+	[ "$_had_VMTEST_QEMU_EXTRA" = 1 ] && VMTEST_QEMU_EXTRA="$_val_VMTEST_QEMU_EXTRA"
+	[ "$_had_VMTEST_VNG" = 1 ] && VMTEST_VNG="$_val_VMTEST_VNG"
+	[ "$_had_VMTEST_SDISK_SIZE" = 1 ] && VMTEST_SDISK_SIZE="$_val_VMTEST_SDISK_SIZE"
+	[ "$_had_VMTEST_NDISK_SIZE" = 1 ] && VMTEST_NDISK_SIZE="$_val_VMTEST_NDISK_SIZE"
+
+	# Apply defaults for anything still unset.
 	: "${KERNEL_DIR:=${VT_TOP}/..}"
 	# Canonicalize only if it actually resolves — let the caller diagnose.
 	local resolved
