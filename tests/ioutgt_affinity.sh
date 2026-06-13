@@ -11,10 +11,9 @@ vt_install_trap
 
 # The ioutgt repo is 9p-visible at its host path; the host runner
 # (testing/run_affinity.sh) publishes its checkout via the marker dir.
-IOUTGT_DIR="${IOUTGT_DIR:-$(cat "$VMTEST_TMPDIR/ioutgt_top" 2>/dev/null ||
-	echo /home/ming/git/ioustgt)}"
-[ -r "$IOUTGT_DIR/testing/vmtest/ioutgt_affinity.sh" ] ||
-	vt_die "ioutgt affinity test not found at $IOUTGT_DIR"
+IOUTGT_DIR="${IOUTGT_DIR:-$(cat "$VMTEST_TMPDIR/ioutgt_top" 2>/dev/null || true)}"
+[ -n "$IOUTGT_DIR" ] && [ -r "$IOUTGT_DIR/testing/vmtest/ioutgt_affinity.sh" ] ||
+	vt_die "ioutgt affinity test not found at '${IOUTGT_DIR:-<unset>}' (run via testing/run_affinity.sh or set IOUTGT_DIR)"
 
 . "$IOUTGT_DIR/testing/vmtest/ioutgt_affinity.sh"
 
