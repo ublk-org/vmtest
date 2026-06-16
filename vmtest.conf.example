@@ -65,6 +65,8 @@
 #                server bound on the host's 127.0.0.1:PORT is 10.0.2.2:PORT in
 #                the guest). Useful as: host runs the server, guest is client.
 #                Set VMTEST_NET=0 to disable for a hermetic boot.
+# VMTEST_NET2=1  Add a second user-mode network interface (off by default).
+#                The guest sees eth0 + eth1 on distinct subnets.
 # VMTEST_SSH=1   Enable an in-VM sshd (forces networking on even if NET=0).
 #                Connect from another terminal with:  vng --ssh-client --ssh-tcp
 # VMTEST_HOLD=1  Have the test script call `vt_hold` (sleep infinity)

@@ -92,6 +92,8 @@ vt_load_config() {
 	[ "${VMTEST_NUMA_NODES+set}" = set ] && { _had_VMTEST_NUMA_NODES=1; _val_VMTEST_NUMA_NODES="$VMTEST_NUMA_NODES"; }
 	local _had_VMTEST_NET=0 _val_VMTEST_NET=
 	[ "${VMTEST_NET+set}" = set ] && { _had_VMTEST_NET=1; _val_VMTEST_NET="$VMTEST_NET"; }
+	local _had_VMTEST_NET2=0 _val_VMTEST_NET2=
+	[ "${VMTEST_NET2+set}" = set ] && { _had_VMTEST_NET2=1; _val_VMTEST_NET2="$VMTEST_NET2"; }
 	local _had_VMTEST_SSH=0 _val_VMTEST_SSH=
 	[ "${VMTEST_SSH+set}" = set ] && { _had_VMTEST_SSH=1; _val_VMTEST_SSH="$VMTEST_SSH"; }
 	local _had_VMTEST_HOLD=0 _val_VMTEST_HOLD=
@@ -127,6 +129,7 @@ vt_load_config() {
 	[ "$_had_VMTEST_MEM" = 1 ] && VMTEST_MEM="$_val_VMTEST_MEM"
 	[ "$_had_VMTEST_NUMA_NODES" = 1 ] && VMTEST_NUMA_NODES="$_val_VMTEST_NUMA_NODES"
 	[ "$_had_VMTEST_NET" = 1 ] && VMTEST_NET="$_val_VMTEST_NET"
+	[ "$_had_VMTEST_NET2" = 1 ] && VMTEST_NET2="$_val_VMTEST_NET2"
 	[ "$_had_VMTEST_SSH" = 1 ] && VMTEST_SSH="$_val_VMTEST_SSH"
 	[ "$_had_VMTEST_HOLD" = 1 ] && VMTEST_HOLD="$_val_VMTEST_HOLD"
 	[ "$_had_VMTEST_KCMDLINE_EXTRA" = 1 ] && VMTEST_KCMDLINE_EXTRA="$_val_VMTEST_KCMDLINE_EXTRA"

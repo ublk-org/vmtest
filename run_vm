@@ -135,9 +135,13 @@ fi
 #                 10.0.2.2 (a server bound on the host's 127.0.0.1:PORT is
 #                 10.0.2.2:PORT from inside the guest). No host setup or root
 #                 required. Set VMTEST_NET=0 to disable for a hermetic boot.
+#   VMTEST_NET2   second user-mode interface, OFF BY DEFAULT. Set to any
+#                 non-empty, non-zero value to add an extra --network user
+#                 (guest sees eth0 + eth1 on distinct subnets).
 #   VMTEST_SSH=1  in-VM sshd so `vng --ssh-client` can attach; this needs
 #                 networking, so it forces user-mode on even if VMTEST_NET=0.
-# Add `--network user` at most once even when both are set.
+# --network user is added once per enabled network interface (VMTEST_NET +
+# optionally VMTEST_NET2). VMTEST_SSH forces the first on regardless.
 : "${VMTEST_NET:=1}"
 NET_ARGS=()
 # VMTEST_NET is default-on, so unlike the opt-in VMTEST_SSH/VMTEST_HOLD knobs
@@ -146,6 +150,11 @@ NET_ARGS=()
 if { [ -n "$VMTEST_NET" ] && [ "$VMTEST_NET" != 0 ]; } || [ -n "${VMTEST_SSH:-}" ]; then
 	NET_ARGS+=(--network user)
 	vt_log "user-mode networking on: reach host services at 10.0.2.2 (VMTEST_NET=0 to disable)"
+	# VMTEST_NET2 adds a second user-mode interface (off by default).
+	if [ -n "${VMTEST_NET2:-}" ] && [ "$VMTEST_NET2" != 0 ]; then
+		NET_ARGS+=(--network user)
+		vt_log "VMTEST_NET2: adding second user-mode network interface"
+	fi
 fi
 if [ -n "${VMTEST_SSH:-}" ]; then
 	NET_ARGS+=(--ssh --ssh-tcp)
