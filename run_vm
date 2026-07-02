@@ -112,7 +112,15 @@ KCMDLINE="intel_iommu=on systemd.mask=dev-zram0.device systemd.mask=systemd-zram
 export TMPDIR="$VMTEST_TMPDIR"
 
 # Forward config the test scripts may want.
+#
+# KERNEL_DIR and VMTEST_CONF matter for correctness: test scripts call
+# vt_load_config again inside the guest, and without these in the guest
+# environment they'd resolve KERNEL_DIR from the DEFAULT vmtest.conf --
+# running another tree's selftests than the kernel we booted. Env beats
+# conf in vt_load_config, so forwarding KERNEL_DIR pins the right tree.
 GUEST_ENV="VMTEST_DATA_DIR=$VMTEST_DATA_DIR"
+GUEST_ENV="$GUEST_ENV KERNEL_DIR=$KERNEL_DIR"
+[ -n "${VMTEST_CONF:-}" ] && GUEST_ENV="$GUEST_ENV VMTEST_CONF=$VMTEST_CONF"
 [ -n "${UBLKSRV_DIR:-}" ] && GUEST_ENV="$GUEST_ENV UBLKSRV_DIR=$UBLKSRV_DIR"
 [ -n "${FIO_DIR:-}"     ] && GUEST_ENV="$GUEST_ENV FIO_DIR=$FIO_DIR"
 [ -n "${RUBLK_DIR:-}"   ] && GUEST_ENV="$GUEST_ENV RUBLK_DIR=$RUBLK_DIR"
