@@ -26,8 +26,7 @@ vt_atexit "rm -f '$HTLB_BUF'"
 fallocate -l 4G "$HTLB_BUF"
 
 run_dev() {
-	local extra=("$@")
-	"$UBLK_VFIO" add --pci "$PCI" -q 2 -d 128 --shmem_zc --htlb "$HTLB_BUF" "${extra[@]}" &
+	"$UBLK_VFIO" add --pci "$PCI" -q 2 -d 128 --shmem_zc --htlb "$HTLB_BUF" &
 	local kpid=$!
 	sleep 3
 	vt_wait_for_block /dev/ublkb0 5 || { kill $kpid 2>/dev/null; vt_die "/dev/ublkb0 not created"; }

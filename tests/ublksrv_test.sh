@@ -13,8 +13,8 @@ vt_require_cmd nbdkit fio nbd-client
 vt_install_trap
 
 vt_log "running: make -C $UBLKSRV_DIR test T=$1"
-make -C "$UBLKSRV_DIR" test T=$1
-ret=$?
+ret=0
+make -C "$UBLKSRV_DIR" test T="$1" || ret=$?
 
 if [ $ret -ne 0 ]; then
 	vt_log "T=$1 failed (rc=$ret); recent dmesg:"

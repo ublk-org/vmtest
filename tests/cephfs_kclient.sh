@@ -731,11 +731,16 @@ case_readdir() {
 	local noise_pid=$!
 
 	local t0 n
-	t0=$SECONDS; n=$(ls -f "$d" | grep -c '^entry_'); vt_log "  warm list: $n in $((SECONDS-t0))s"
+	# ls -f: raw unsorted readdir is what is being timed; names are fixed entry_N.
+	t0=$SECONDS
+	# shellcheck disable=SC2010
+	n=$(ls -f "$d" | grep -c '^entry_'); vt_log "  warm list: $n in $((SECONDS-t0))s"
 	[ "$n" = "$CEPHTEST_READDIR_N" ] || note_fail "warm readdir returned $n entries"
 
 	echo 3 > /proc/sys/vm/drop_caches
-	t0=$SECONDS; n=$(ls -f "$d" | grep -c '^entry_'); vt_log "  cold list: $n in $((SECONDS-t0))s"
+	t0=$SECONDS
+	# shellcheck disable=SC2010
+	n=$(ls -f "$d" | grep -c '^entry_'); vt_log "  cold list: $n in $((SECONDS-t0))s"
 	[ "$n" = "$CEPHTEST_READDIR_N" ] || note_fail "cold readdir returned $n entries"
 
 	# rewinddir/seekdir consistency
@@ -839,6 +844,8 @@ case_snapshot() {
 	[ "$(cat "$d/.snap/snap1/f" 2>/dev/null)" = original ] \
 		|| note_fail "snapshot does not preserve the original content"
 	[ "$(cat "$d/f")" = modified ] || note_fail "live file content wrong"
+	# Checks the .snap readdir listing, not a lookup, so a plain [ -d ] would not do.
+	# shellcheck disable=SC2010
 	ls "$d/.snap" | grep -q snap1 || note_fail "snapshot not listed in .snap"
 	rmdir "$d/.snap/snap1" || note_fail "cannot remove snapshot"
 	rm -rf "$d"

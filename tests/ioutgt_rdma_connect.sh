@@ -14,13 +14,18 @@ PORT=4420
 LOG=/tmp/ioutgt-rdma.log
 
 fail() { echo "[rdma] RESULT: FAIL ($*)"; exit 1; }
+# NVMe namespace nodes currently present, one per line, sorted.
+nvme_ns_list() {
+	local f
+	for f in /dev/nvme*n*; do [ -e "$f" ] && echo "$f"; done | sort
+}
 
 echo "[rdma] loading rdma_rxe + nvme_rdma"
 modprobe nvme_rdma 2>&1 || true
-# shellcheck source=../common/rxe.sh
+# shellcheck source=/dev/null  # rxe.sh lives in the ioutgt checkout
 . "$REPO_TOP/testing/common/rxe.sh"
 rxe_setup || fail "rxe bring-up (no netdev/IP)"
-DEV="$RXE_DEV" IP="$RXE_IP"
+IP="$RXE_IP"
 ibv_devinfo 2>&1 | grep -E "hca_id|state:|link_layer" | head -6
 
 # Start the target on the rxe IP. Stream its log live (so a hang/panic is
@@ -30,6 +35,7 @@ RUST_LOG=debug RUST_BACKTRACE=1 "$BIN" --listen "$IP:$PORT" --subsys-nqn "$NQN" 
 TGT=$!
 tail -f "$LOG" | sed 's/^/[tgt] /' &
 TAILER=$!
+# shellcheck disable=SC2329  # invoked via trap below
 cleanup() {
 	nvme disconnect -n "$NQN" >/dev/null 2>&1 || true
 	kill "$TGT" "$TAILER" 2>/dev/null || true
@@ -49,10 +55,10 @@ echo "[rdma] === nvme discover ==="
 timeout 20 nvme discover -t rdma -a "$IP" -s "$PORT" 2>&1 | head -20 || echo "[rdma] discover rc=$? (continuing)"
 
 echo "[rdma] === nvme connect ==="
-before=$(ls /dev/nvme*n* 2>/dev/null | sort)
+before=$(nvme_ns_list)
 timeout 20 nvme connect -t rdma -a "$IP" -s "$PORT" -n "$NQN" 2>&1 || fail "nvme connect (rc=$?)"
 udevadm settle 2>/dev/null || sleep 1
-after=$(ls /dev/nvme*n* 2>/dev/null | sort)
+after=$(nvme_ns_list)
 NS=$(comm -13 <(echo "$before") <(echo "$after") | head -1)
 [ -n "${NS:-}" ] || fail "no namespace device appeared after connect"
 echo "[rdma] connected namespace: $NS"
@@ -88,10 +94,10 @@ for i in $(seq 1 8); do
 done
 udevadm settle 2>/dev/null || sleep 1
 # Final connect must still work + read after the churn.
-before2=$(ls /dev/nvme*n* 2>/dev/null | sort)
+before2=$(nvme_ns_list)
 nvme connect -t rdma -a "$IP" -s "$PORT" -n "$NQN" 2>&1 || fail "post-soak connect"
 udevadm settle 2>/dev/null || sleep 1
-after2=$(ls /dev/nvme*n* 2>/dev/null | sort)
+after2=$(nvme_ns_list)
 NS2=$(comm -13 <(echo "$before2") <(echo "$after2") | head -1)
 [ -n "${NS2:-}" ] || fail "post-soak no namespace appeared"
 dd if="$NS2" of=/dev/null bs=4096 count=64 iflag=direct 2>&1 || fail "post-soak read"

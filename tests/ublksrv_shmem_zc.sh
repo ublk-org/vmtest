@@ -27,8 +27,7 @@ truncate -s 256M "$BACKING"
 dd if=/dev/zero of="$BACKING" bs=1M count=256 oflag=direct 2>/dev/null
 
 run_dev() {
-	local args=("$@")
-	"$UBLK_LOOP" add -t loop -q 1 -f "$BACKING" --shmem_zc --htlb "$HTLB_BUF" "${args[@]}" &
+	"$UBLK_LOOP" add -t loop -q 1 -f "$BACKING" --shmem_zc --htlb "$HTLB_BUF" &
 	local kpid=$!
 	sleep 2
 	local dev=""

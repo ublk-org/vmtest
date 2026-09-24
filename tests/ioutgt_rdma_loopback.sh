@@ -5,7 +5,7 @@ set -u
 BIN="${1:?usage: ioutgt_rdma_loopback <test-binary-path> <repo-top>}"
 REPO_TOP="${2:?usage: ioutgt_rdma_loopback <test-binary-path> <repo-top>}"
 echo "[rdma] loading rdma_rxe"
-# shellcheck source=../common/rxe.sh
+# shellcheck source=/dev/null  # rxe.sh lives in the ioutgt checkout
 . "$REPO_TOP/testing/common/rxe.sh"
 rxe_setup || echo "[rdma] rxe bring-up incomplete (no netdev/IP?) — proceeding"
 ibv_devinfo 2>&1 | grep -E "hca_id|state:|link_layer" | head -6

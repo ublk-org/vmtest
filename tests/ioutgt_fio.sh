@@ -15,6 +15,7 @@ IOUTGT_DIR="${IOUTGT_DIR:-$(cat "$VMTEST_TMPDIR/ioutgt_top" 2>/dev/null || true)
 [ -n "$IOUTGT_DIR" ] && [ -r "$IOUTGT_DIR/testing/common/ioutgt_connect.sh" ] ||
 	vt_die "ioutgt repo not found at '${IOUTGT_DIR:-<unset>}' (run via testing/run_interop.sh or set IOUTGT_DIR)"
 
+# shellcheck source=/dev/null  # lives in the ioutgt checkout
 . "$IOUTGT_DIR/testing/common/ioutgt_connect.sh"
 
 ioutgt_run_m5

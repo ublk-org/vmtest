@@ -440,7 +440,7 @@ ceph_check_dmesg() {
 # ----------------------------------------------------------------------
 
 MPIEXEC=""
-MPI_EXTRA=""
+MPI_EXTRA=()
 
 # Fedora keeps the MPI launchers out of the default PATH (one directory per
 # implementation), so look there as well as in $PATH.
@@ -472,8 +472,8 @@ io500_require() {
 	# OpenMPI refuses to run as root unless told otherwise, and everything in
 	# this guest is root. MPICH has no such restriction.
 	if "$MPIEXEC" --version 2>&1 | grep -qi "open\(-\| \)mpi\|openrte"; then
-		MPI_EXTRA="--allow-run-as-root --oversubscribe"
-		vt_log "MPI: OpenMPI detected, adding $MPI_EXTRA"
+		MPI_EXTRA=(--allow-run-as-root --oversubscribe)
+		vt_log "MPI: OpenMPI detected, adding ${MPI_EXTRA[*]}"
 	fi
 	vt_log "MPI: $MPIEXEC (np=$IO500_NP)"
 	# Fedora's MPI packages live outside the default loader path (they expect
@@ -617,7 +617,7 @@ RC=0
 # cwd must be writable: io500 drops a few files next to itself. The binary is
 # referenced by absolute path so the io500 tree itself stays read-only on 9p.
 ( cd "$CEPH_WORK" && timeout "${CEPHTEST_IO500_TIMEOUT:-2400}" \
-	"$MPIEXEC" $MPI_EXTRA -np "$IO500_NP" \
+	"$MPIEXEC" "${MPI_EXTRA[@]}" -np "$IO500_NP" \
 	"$IO500_DIR/io500" "$INI" --timestamp io500 ) > "$RUNLOG" 2>&1 || RC=$?
 
 if [ "$RC" != 0 ]; then
