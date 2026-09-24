@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # SPDX-License-Identifier: GPL-2.0
 #
 # Common helpers for vmtest scripts.

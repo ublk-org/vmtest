@@ -1,0 +1,4 @@
+# Tests source lib/common.sh via "$(dirname "$0")/../lib/common.sh";
+# resolve that relative to each script so shellcheck follows it.
+source-path=SCRIPTDIR
+external-sources=true
