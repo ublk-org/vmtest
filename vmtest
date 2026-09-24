@@ -52,7 +52,8 @@ Global options:
 
 Commands:
   list                       List available tests.
-  run NAME|PATH [args...]    Boot KERNEL_DIR under vng and run tests/NAME.sh,
+  run NAME|PATH [args...]    Boot KERNEL_DIR (unset: the host's distro
+                             kernel) under vng and run tests/NAME.sh,
                              or any executable script given by path (it gets
                              \$VMTEST_DIR so it can source lib/common.sh).
   run [shell|bash]           Boot KERNEL_DIR under vng and drop into an
@@ -195,7 +196,7 @@ cmd_env() {
 
 cmd_config() {
 	cat <<EOF
-KERNEL_DIR      = $KERNEL_DIR
+KERNEL_DIR      = ${KERNEL_DIR:-(unset: distro kernel $(uname -r))}
 VMTEST_DATA_DIR = $VMTEST_DATA_DIR
 VMTEST_TMPDIR   = $VMTEST_TMPDIR
 UBLKSRV_DIR     = ${UBLKSRV_DIR:-(unset)}
@@ -213,7 +214,13 @@ EOF
 	else
 		echo "vng binary      = MISSING (install virtme-ng or set VMTEST_VNG)"
 	fi
-	if [ -d "$KERNEL_DIR" ]; then
+	if [ -z "$KERNEL_DIR" ]; then
+		if [ -r "/boot/vmlinuz-$(uname -r)" ] || [ -r "/lib/modules/$(uname -r)/vmlinuz" ]; then
+			echo "kernel vmlinux  = OK (distro kernel $(uname -r))"
+		else
+			echo "kernel vmlinux  = MISSING (no readable /boot/vmlinuz-$(uname -r))"
+		fi
+	elif [ -d "$KERNEL_DIR" ]; then
 		if [ -f "$KERNEL_DIR/vmlinux" ]; then
 			echo "kernel vmlinux  = OK ($KERNEL_DIR/vmlinux)"
 		else

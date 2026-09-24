@@ -6,8 +6,10 @@
 # --- Required ---------------------------------------------------------
 
 # Kernel source tree to boot. Must already be built (vmlinux + modules).
-# If unset, vmtest assumes the repo lives at <kernel>/vmtest/ and uses
-# its parent directory.
+# If unset (or empty), vmtest boots the host's running distribution
+# kernel instead -- there is no parent-directory default, so a repo
+# checked out at <kernel>/vmtest/ must still set this. Tests that need
+# the tree itself (selftests) SKIP without it.
 #KERNEL_DIR="$HOME/git/linux"
 
 # --- Optional ---------------------------------------------------------

@@ -7,6 +7,7 @@ set -eu
 . "$(dirname "$0")/../lib/common.sh"
 vt_load_config
 vt_require_root
+vt_require_kernel_tree
 
 cd "$KERNEL_DIR/tools/testing/selftests/io_uring" \
 	|| vt_die "no io_uring selftest tree under $KERNEL_DIR"

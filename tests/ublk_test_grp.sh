@@ -8,6 +8,7 @@ set -euo pipefail
 . "$(dirname "$0")/../lib/common.sh"
 vt_load_config
 vt_require_root
+vt_require_kernel_tree
 
 GRP="${1:-}"
 [ -n "$GRP" ] || vt_die "usage: vmtest run ublk_test_grp <group>"

@@ -8,8 +8,8 @@
 #
 # You normally invoke this via `./vmtest run <name>` instead.
 #
-# Requires KERNEL_DIR (from vmtest.conf or env) to point at a built kernel
-# tree. The test script path is resolved on the host; the host fs is
+# Boots the built kernel tree at KERNEL_DIR (from vmtest.conf or env), or
+# the host's distribution kernel when KERNEL_DIR is unset/empty. The test script path is resolved on the host; the host fs is
 # visible inside the VM via 9p so any absolute path under the repo works.
 set -eu
 
@@ -41,10 +41,22 @@ fi
 VNG_BIN="${VMTEST_VNG:-vng}"
 command -v "$VNG_BIN" >/dev/null \
 	|| vt_die "'$VNG_BIN' not found (install virtme-ng or set VMTEST_VNG)"
-[ -d "$KERNEL_DIR" ] \
-	|| vt_die "KERNEL_DIR=$KERNEL_DIR does not exist (set it in vmtest.conf)"
-[ -f "$KERNEL_DIR/vmlinux" ] \
-	|| vt_die "no vmlinux in $KERNEL_DIR — build the kernel first"
+# Kernel to boot. KERNEL_DIR set: that built tree. KERNEL_DIR empty: the
+# distribution kernel the host is running — a bare `vng --run` boots
+# /boot/vmlinuz-$(uname -r) with the host's /lib/modules, visible over 9p.
+if [ -n "$KERNEL_DIR" ]; then
+	[ -d "$KERNEL_DIR" ] \
+		|| vt_die "KERNEL_DIR=$KERNEL_DIR does not exist (set it in vmtest.conf)"
+	[ -f "$KERNEL_DIR/vmlinux" ] \
+		|| vt_die "no vmlinux in $KERNEL_DIR — build the kernel first"
+	RUN_ARGS=(--run "$KERNEL_DIR")
+else
+	HOST_KREL="$(uname -r)"
+	[ -r "/boot/vmlinuz-$HOST_KREL" ] || [ -r "/lib/modules/$HOST_KREL/vmlinuz" ] \
+		|| vt_die "KERNEL_DIR unset and no readable distro kernel for $HOST_KREL (/boot/vmlinuz-$HOST_KREL)"
+	vt_log "KERNEL_DIR unset: booting the distribution kernel $HOST_KREL"
+	RUN_ARGS=(--run)
+fi
 
 # Lazily create the two extra block devices the IOMMU tests want.
 SDISK="$VMTEST_DATA_DIR/d1.img"
@@ -342,7 +354,7 @@ fi
 
 
 # shellcheck disable=SC2086
-"${MASK_WRAP[@]}" "$VNG_BIN" --run "$KERNEL_DIR" --force-9p \
+"${MASK_WRAP[@]}" "$VNG_BIN" "${RUN_ARGS[@]}" --force-9p \
 	--cpus "$VM_CPUS" --memory "$VM_MEM" \
 	--verbose \
 	--rwdir "$VMTEST_DATA_DIR" \

@@ -8,6 +8,7 @@ set -eu
 . "$(dirname "$0")/../lib/common.sh"
 vt_load_config
 vt_require_root
+vt_require_kernel_tree
 
 cd "$KERNEL_DIR/tools/testing/selftests/ublk" \
 	|| vt_die "no ublk selftest tree under $KERNEL_DIR"

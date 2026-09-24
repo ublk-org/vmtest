@@ -52,7 +52,8 @@ of each `tests/*.sh` — preserve the exact prefix (`# vmtest-desc:` /
    registered test (resolves to `tests/NAME.sh`) or a literal path to any
    script — `cmd_run` prefers an existing file at the given path before
    falling back to `tests/NAME.sh` (see `vmtest:108`).
-3. `run_vm` checks `$KERNEL_DIR/vmlinux`, ensures `data/d1.img` and
+3. `run_vm` checks `$KERNEL_DIR/vmlinux` (or, with `KERNEL_DIR` unset, the
+   host's `/boot/vmlinuz-$(uname -r)`), ensures `data/d1.img` and
    `data/d2.img` exist (creating them with `truncate` if not), then boots
    `vng` with:
    - `--rwdir $VMTEST_DATA_DIR` — host dir visible read-write in guest.
@@ -139,10 +140,10 @@ advertises requirements so testers can tell which is which.
 
 ## Things that look like bugs but aren't
 
-- `KERNEL_DIR` defaults to `<repo>/..` not `<repo>/../..` — the convention
-  is that the repo sits inside the kernel tree as `vmtest/`, not two levels
-  deep. (Earlier `run_vm` versions took the kernel path as a positional arg,
-  which is why that pattern was easy to get wrong.)
+- `KERNEL_DIR` has no default: unset/empty makes `run_vm` boot the host's
+  running distribution kernel (bare `vng --run`), not `<repo>/..`. Tests that
+  need the tree itself call `vt_require_kernel_tree`, which SKIPs (exit 4)
+  in that case rather than failing.
 - The two extra disk images are lazily created by `run_vm` on first boot,
   so a freshly-cloned repo will show `data/d{1,2}.img` appearing after the
   first `./vmtest run`.

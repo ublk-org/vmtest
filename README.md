@@ -32,7 +32,7 @@ vmtest/
 git clone https://github.com/<you>/vmtest.git
 cd vmtest
 cp vmtest.conf.example vmtest.conf
-$EDITOR vmtest.conf                   # set KERNEL_DIR at minimum
+$EDITOR vmtest.conf                   # set KERNEL_DIR (unset = distro kernel)
 
 ./vmtest -c vmtest.conf config        # check everything resolves
 ./vmtest -c vmtest.conf list          # see available tests
@@ -90,7 +90,7 @@ deps cause tests to **skip** (exit 4), not fail.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `KERNEL_DIR` | `<repo>/..` | Kernel tree to boot (must have `vmlinux`). |
+| `KERNEL_DIR` | *(unset)* | Kernel tree to boot (must have `vmlinux`). Unset or empty boots the host's running distribution kernel; tests that need the tree (selftests) then SKIP. |
 | `VMTEST_DATA_DIR` | `<repo>/data` | Scratch dir exposed to the guest via 9p. |
 | `UBLKSRV_DIR` | unset | Path to a built ublksrv. |
 | `FIO_DIR` | unset | Path to an fio source tree (uses `fio/t/io_uring`). |

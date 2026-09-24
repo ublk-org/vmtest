@@ -139,10 +139,12 @@ vt_load_config() {
 	[ "$_had_VMTEST_NDISK_SIZE" = 1 ] && VMTEST_NDISK_SIZE="$_val_VMTEST_NDISK_SIZE"
 
 	# Apply defaults for anything still unset.
-	: "${KERNEL_DIR:=${VT_TOP}/..}"
+	# KERNEL_DIR empty (unset, or set to "") means "no kernel tree": run_vm
+	# boots the distribution kernel the host is running instead.
+	: "${KERNEL_DIR:=}"
 	# Canonicalize only if it actually resolves — let the caller diagnose.
 	local resolved
-	if resolved="$(cd "$KERNEL_DIR" 2>/dev/null && pwd)"; then
+	if [ -n "$KERNEL_DIR" ] && resolved="$(cd "$KERNEL_DIR" 2>/dev/null && pwd)"; then
 		KERNEL_DIR="$resolved"
 	fi
 	: "${VMTEST_DATA_DIR:=${VT_TOP}/data}"
@@ -180,6 +182,15 @@ vt_require_module() {
 	for m in "$@"; do
 		modprobe "$m" 2>/dev/null || vt_skip "cannot modprobe $m"
 	done
+}
+
+# Tests that use the kernel tree itself (selftests, in-tree .ko files).
+# With KERNEL_DIR empty the VM runs the distribution kernel and there is
+# no tree to use, which is a missing optional dep, not a failure.
+vt_require_kernel_tree() {
+	[ -n "$KERNEL_DIR" ] \
+		|| vt_skip "KERNEL_DIR not set (booted the distribution kernel, no kernel tree)"
+	[ -d "$KERNEL_DIR" ] || vt_die "KERNEL_DIR=$KERNEL_DIR does not exist"
 }
 
 vt_require_ublksrv() {
