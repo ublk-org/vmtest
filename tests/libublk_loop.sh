@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-2.0
-# vmtest-desc: run the libublk-rs loop example (sync and async) against a file and verify IO
-# vmtest-requires: root rublk
+# vmtest-desc: run the libublk-rs loop example (sync/async, copy and zero copy) against a file and verify IO
+# vmtest-requires: root rublk ublk_drv
 # vmtest-host: yes
 # Note: like libublk.sh, RUBLK_DIR points at the crate checkout and the
 #       rust toolchain lives under the invoking user's home.
@@ -10,6 +10,7 @@ set -eu
 . "$(dirname "$0")/../lib/common.sh"
 vt_load_config
 vt_require_cmd cargo
+vt_require_module ublk_drv
 
 [ -d "$RUBLK_DIR" ] || vt_skip "RUBLK_DIR not set or missing: $RUBLK_DIR"
 
@@ -39,9 +40,11 @@ trap cleanup EXIT
 dd if=/dev/urandom of="$back" bs=1M count=64 status=none
 dd if=/dev/urandom of="$data" bs=1M count=64 status=none
 
-for mode in "" "-a"; do
+# Extra test args (e.g. "-T 2", "-q 2 -T 2") are passed to every `add`.
+# "" / -a: per-tag io buffers; -z: UBLK_F_AUTO_BUF_REG zero copy
+for mode in "" "-a" "-z" "-a -z"; do
 	# shellcheck disable=SC2086  # $mode is deliberately word-split
-	"$loop_bin" add -n 0 -f "$back" --foreground $mode &
+	"$loop_bin" add -n 0 -f "$back" --foreground $mode "$@" &
 	lo_pid=$!
 	for _ in $(seq 50); do
 		[ -b /dev/ublkb0 ] && break
@@ -75,4 +78,4 @@ for mode in "" "-a"; do
 	lo_pid=
 done
 
-echo "libublk loop example: sync and async modes OK"
+echo "libublk loop example: sync/async, copy and zero-copy modes OK (extra args: $*)"
