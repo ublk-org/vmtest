@@ -67,11 +67,18 @@ of each `tests/*.sh` — preserve the exact prefix (`# vmtest-desc:` /
 
 ## Config resolution
 
-`vt_load_config` (in `lib/common.sh`) sources `${VMTEST_CONF:-./vmtest.conf}`
-if present, then fills defaults. **The environment always wins** because
-the `: "${VAR:=default}"` syntax only sets when unset. This means
-`KERNEL_DIR=… ./vmtest run …` is the canonical per-invocation override and
-should be treated as a supported public interface — don't break it.
+The `vmtest` CLI picks the config file: `-c FILE` if given (must be
+readable, canonicalized to an absolute path), otherwise the in-tree
+`<repo>/vmtest.conf` — an inherited `VMTEST_CONF` env var is deliberately
+ignored, so only `-c` can select another file. Either way it exports
+`VMTEST_CONF`, which `run_vm` forwards into the guest.
+
+`vt_load_config` (in `lib/common.sh`) sources
+`${VMTEST_CONF:-$VT_TOP/vmtest.conf}` if present, then fills defaults.
+**The environment always wins** because the `: "${VAR:=default}"` syntax
+only sets when unset. This means `KERNEL_DIR=… ./vmtest run …` is the
+canonical per-invocation override and should be treated as a supported
+public interface — don't break it.
 
 ## Conventions for new tests
 

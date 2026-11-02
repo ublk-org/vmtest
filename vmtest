@@ -20,25 +20,35 @@ SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 # config file and exports it so run_vm inherits the same choice. Everything
 # the harness needs (KERNEL_DIR, UBLKSRV_DIR, LIBURING_DIR, ...) can then live
 # in that one file instead of being passed as command-line variables.
+conf_opt=0
 while [ $# -gt 0 ]; do
 	case "$1" in
 	-c|--config)
 		[ $# -ge 2 ] || vt_die "$1 requires a FILE argument"
-		export VMTEST_CONF="$2"; shift 2 ;;
+		conf_opt=1; VMTEST_CONF="$2"; shift 2 ;;
 	-c=*|--config=*)
-		export VMTEST_CONF="${1#*=}"; shift ;;
+		conf_opt=1; VMTEST_CONF="${1#*=}"; shift ;;
 	*) break ;;
 	esac
 done
 
-# An explicitly selected config file must exist; canonicalize to an absolute
+# -c is the only way to pick the config. Without it, use the in-tree
+# vmtest.conf beside this script -- regardless of cwd, and ignoring any
+# VMTEST_CONF inherited from the environment, so a stale export left over
+# from another checkout cannot silently retarget the run. The in-tree file
+# may not exist yet (fresh clone): vt_load_config then just uses defaults.
+#
+# An explicitly selected file must exist; canonicalize it to an absolute
 # path so it resolves identically after run_vm is exec'd (cwd is preserved,
-# but an absolute path is robust regardless).
-if [ -n "${VMTEST_CONF:-}" ]; then
+# but an absolute path is robust regardless). Exported either way so run_vm
+# and the guest resolve the same file.
+if [ "$conf_opt" = 1 ]; then
 	[ -r "$VMTEST_CONF" ] || vt_die "config file not readable: $VMTEST_CONF"
 	VMTEST_CONF="$(cd "$(dirname "$VMTEST_CONF")" && pwd)/$(basename "$VMTEST_CONF")"
-	export VMTEST_CONF
+else
+	VMTEST_CONF="$SELF_DIR/vmtest.conf"
 fi
+export VMTEST_CONF
 
 vt_load_config
 
@@ -47,7 +57,9 @@ usage() {
 usage: vmtest [-c FILE] <command> [args]
 
 Global options:
-  -c, --config FILE          Use FILE as the config (default: vmtest.conf).
+  -c, --config FILE          Use FILE as the config (default: the in-tree
+                             $SELF_DIR/vmtest.conf;
+                             VMTEST_CONF in the environment is ignored).
                              May set KERNEL_DIR, UBLKSRV_DIR, LIBURING_DIR, etc.
 
 Commands:
@@ -67,7 +79,7 @@ Commands:
                                eval "\$(vmtest -c FILE env VMTEST_DATA_DIR)"
   help                       This message.
 
-Config:  ${VMTEST_CONF:-$SELF_DIR/vmtest.conf}   (copy vmtest.conf.example to start)
+Config:  $VMTEST_CONF   (copy vmtest.conf.example to start)
 EOF
 }
 
@@ -195,7 +207,10 @@ cmd_env() {
 }
 
 cmd_config() {
+	local conf_state=""
+	[ -r "$VMTEST_CONF" ] || conf_state=" (not found: defaults + env only)"
 	cat <<EOF
+VMTEST_CONF     = $VMTEST_CONF$conf_state
 KERNEL_DIR      = ${KERNEL_DIR:-(unset: distro kernel $(uname -r))}
 VMTEST_DATA_DIR = $VMTEST_DATA_DIR
 VMTEST_TMPDIR   = $VMTEST_TMPDIR

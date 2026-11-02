@@ -42,8 +42,10 @@ $EDITOR vmtest.conf                   # set KERNEL_DIR (unset = distro kernel)
 ```
 
 The `-c vmtest.conf` is **preferred** — it makes the config file explicit.
-(If omitted, `vmtest` silently defaults to `./vmtest.conf`, which can be
-surprising when you meant to use a different config.) Everything the harness
+If omitted, `vmtest` uses the in-tree `vmtest.conf` next to the `vmtest`
+script, regardless of the current directory and ignoring any `VMTEST_CONF`
+in the environment; `-c` is the only way to select a different file.
+`./vmtest config` prints which file was used. Everything the harness
 needs — `KERNEL_DIR`, `UBLKSRV_DIR`, `LIBURING_DIR`, etc. — can live in that
 one file instead of being passed as command-line variables.
 
